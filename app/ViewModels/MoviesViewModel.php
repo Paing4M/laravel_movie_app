@@ -1,0 +1,46 @@
+<?php
+
+namespace App\ViewModels;
+
+use Illuminate\Support\Carbon;
+use Spatie\ViewModels\ViewModel;
+
+class MoviesViewModel extends ViewModel {
+    public $popularMovies, $genres, $nowPlayingMovies;
+
+    public function __construct($popularMovies, $nowPlayingMovies, $genres) {
+        $this->popularMovies = $popularMovies;
+        $this->nowPlayingMovies = $nowPlayingMovies;
+        $this->genres = $genres;
+    }
+
+    public function popularMovies() {
+        return $this->movieFormatted($this->popularMovies);
+    }
+
+    public function nowPlayingMovies() {
+        return $this->movieFormatted($this->nowPlayingMovies);
+    }
+
+
+    public function genres() {
+        return collect($this->genres)->mapWithKeys(function ($genre) {
+            return [$genre['id'] => $genre['name']];
+        });
+    }
+
+    protected function movieFormatted($movies) {
+
+        return collect($movies)->map(function ($movie) {
+            $genresFormatted = collect($movie['genre_ids'])->mapWithKeys(function ($value) {
+                return [$value => $this->genres()->get($value)];
+            })->implode(', ');
+            return collect($movie)->merge([
+                'poster_path' => "https://image.tmdb.org/t/p/w235_and_h235_face" . $movie['poster_path'],
+                'vote_average' => $movie['vote_average'] * 10 . '%',
+                'release_date' => Carbon::parse($movie['release_date'])->format('Y d, m'),
+                'genres' => $genresFormatted
+            ])->only(['poster_path', 'id', 'genre_ids', 'title', 'vote_average', 'overview', 'release_date', 'genres',]);
+        });
+    }
+}
